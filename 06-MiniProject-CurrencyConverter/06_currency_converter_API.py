@@ -1,29 +1,25 @@
 # 1. Import necessary functionality
 import json
-import os
 import sys
+import requests
 import random
 
-# 1.5. Get the file path regarless of the script is run
-def get_file_path(filename: str) -> str:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(script_dir, filename)
-
-# 2. Load the rates from a JSON file
-def load_rates(json_file: str) -> dict[str, dict]:
-    file_path = get_file_path(json_file)
+# 2. Get the file path regarless of the script is run
+def fetch_live_rates() -> dict[str, dict]:
+    url = "https://www.floatrates.com/daily/eur.json"
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return json.load(file)
+        print("Fetching live market data...")
+        response = requests.get(url, timeout=10)
 
-    except FileNotFoundError:
-        print(f"Error: The file '{json_file}', was not found at {file_path}")
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.exceptions.RequestException as e:
+        print(f"Network Error: Could not connect to API. {e}")
         sys.exit(1)
-    
-    except json.JSONDecodeError:
-        print(f"Error: Failed to decode JSON from '{json_file}")
-        sys.exit(1)
+
 
 # 3. Create the function
 def convert(amount: float, base: str, to: str, rates: dict[str, dict]) -> float:
@@ -32,18 +28,14 @@ def convert(amount: float, base: str, to: str, rates: dict[str, dict]) -> float:
     to = to.lower()
 
     # 5. Get the dictionaries and define EUR as the reference rate (1.0) if it's not in the dictionary
-    from_rate_data = rates.get(base) if base != 'eur' else {'rate': 1.0}
-    to_rate_data = rates.get(to) if to != 'eur' else {'to': 1.0}
+    from_rate_data = rates.get(base, {'rate': 1.0}) if base != 'eur' else {'rate': 1.0}
+    to_rate_data = rates.get(to, {'rate': 1.0}) if to != 'eur' else {'to': 1.0}
 
-    # 6. Checks if the currencies were found or defined
-    if from_rate_data is None or to_rate_data is None:
-        missing = base if from_rate_data is None else to
-        raise ValueError(f"Currency '{missing}' not found in the database" )
 
-    # 7. If base is EUR (1.0), it simplifies to: Amount * TargetRate
+    # 6. Math: Result = Amount * (ToRate / FromRate)
     return amount * (to_rate_data['rate'] / from_rate_data['rate'])
 
-# 8. User's input in amount variable
+# 7. User's input in amount variable
 def get_float(prompt: str) ->float:
     while True:
         try:
@@ -51,7 +43,7 @@ def get_float(prompt: str) ->float:
         except ValueError:
             print("Invalid input, only digits please")
 
-# 9. Validates user's input in currencies' variables
+# 8. Validates user's input in currencies' variables
 def get_currency(prompt: str, rates: dict[str, dict]) -> str:
     while True:
         user_input = input(prompt).strip().lower()
@@ -60,7 +52,6 @@ def get_currency(prompt: str, rates: dict[str, dict]) -> str:
             return user_input
         
         print(f"'{user_input}' is not valid currency, Please try again: ")
-        print(f"'{user_input}' is not valid currency, Please try again: ")
         options = random.choices(list(rates), k=10)
         print(f"Available options: {options} ... and more.")
         print("-"*30)
@@ -68,7 +59,7 @@ def get_currency(prompt: str, rates: dict[str, dict]) -> str:
 
 # 10. Create a main entry point
 def main() -> None:
-    rates_data = load_rates('rates.json')
+    rates_data = fetch_live_rates()
     try:
         amount: float = get_float('Enter the total amount to convert: ')
         base_currency = get_currency('From: (e.g., USD, EUR): ', rates_data)
@@ -87,3 +78,4 @@ def main() -> None:
 # 11. Run the script
 if __name__ == '__main__':
     main()
+
