@@ -36,15 +36,19 @@ class Password:
         has_upper = any(char.isupper() for char in password)
         has_symbol = any(char in string.punctuation for char in password) 
         
-        if length_ok and has_upper and has_symbol:
-            return "Is Strong"
-        elif length_ok or (has_upper and has_symbol):
-            return "Is Safe"
-        elif length_ok or has_upper or has_symbol:
-            return "Is low"
-        else:
-            return "Is weak"
+        tips = []
+        if not length_ok: tips.append("more characters")
+        if not has_upper: tips.append("uppercase letters")
+        if not has_symbol: tips.append("symbols")
 
+        if not tips:
+            return "Strong!"
+        if len(tips) == 1:
+            return f"Safe: Add {tips[0]} for full safety"
+        if len(tips) == 2:
+            return f"Low: Missing {' and '.join(tips)}"
+        else:
+            return "Needs an overhaul"
 
 # 7. Create the main entry point
 def main() -> None:
@@ -58,7 +62,7 @@ def main() -> None:
         password: Password = Password(random_lenght, random_upper, random_symbols)
         generated: str = password.generate()
         is_safe = password.password_check(generated)
-        
+
         print(f'{generated} | {(is_safe)}')
 
 
