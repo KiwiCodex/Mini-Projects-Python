@@ -1,3 +1,6 @@
+import winsound #Just for fun, just works in Windows
+import time
+
 # 1. Create the data that translates morse code (for a complete table, search on Google)
 morse_code_dict: dict[str, str] = {
     'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
@@ -43,21 +46,41 @@ def decode_morse(morse: str) -> str:
     return decoded_text.strip()
     '''
 
+# Sound for fun
+def play_morse(morse: str):
+    unit = 150
+    freq = 800
+
+    print("Just heard it!")
+
+    for char in morse:
+        if char == '.':
+            winsound.Beep(freq, unit)
+            time.sleep(unit/1000)
+        elif char == '-':
+            winsound.Beep(freq, unit*3)
+            time.sleep(unit/1000)
+        elif char == ' ' or char == '/':
+            time.sleep((unit * 3)/1000)
+
 
 # 3. Create a main entry point
 def main() -> None:
     # 4. Get that sexy user input
     user_input: str = input('Enter text: ')
-    encoded: str = convert_to_morse(user_input)
 
-    # 5. Display the output in the console
-    print(encoded)
+    if user_input:
 
-    decoded: str = decode_morse(encoded)
-    # 6. Display the reversed output in the console
-    print(f"Original Text: {decoded}")
+        encoded: str = convert_to_morse(user_input)
+        print(encoded)
+        play_morse(encoded)
+        
+        decoded: str = decode_morse(encoded)
+        print(f"Original Text: {decoded}")
+
+        print("\nSound Transmission finished!")
 
 
-# 7. Run the script
+# Run the script
 if __name__ == "__main__":
     main()
