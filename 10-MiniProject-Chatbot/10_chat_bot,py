@@ -1,7 +1,10 @@
 # 1. Import necessary functionality
 from difflib import SequenceMatcher
 from datetime import datetime
-
+import sys
+import python_weather
+import asyncio
+import re
 
 # 2. Create a ChatBot class
 class ChatBot:
@@ -14,7 +17,7 @@ class ChatBot:
     # 4. Create a function to check the similarity of the user input to the predefined responses
     @staticmethod
     def calculate_similarity(input_sentence: str, response_sentence: str) -> float:
-        sequence: SequenceMatcher = SequenceMatcher(a=input_sentence, b=response_sentence)
+        sequence: SequenceMatcher = SequenceMatcher(a=input_sentence.lower(), b=response_sentence.lower())
         return sequence.ratio()
 
     # 5. Create a function that grabs the best response
@@ -26,12 +29,42 @@ class ChatBot:
         for response in self.responses:
             # 7. Calculate similarity between user input and predefined response
             similarity: float = self.calculate_similarity(user_input, response)
-            # 8. Update the highest similarity and best match if current similarity is higher
+            # 8. Update the highest similarity and best match if current similarity is highe
             if similarity > highest_similarity:
                 highest_similarity = similarity
-                best_match = self.responses[response]
+                if similarity > 0.49:
+                    best_match = self.responses[response]
+                else:
+                    best_match = 'Sorry, I didn\'t understand that.'
+                        
 
         return best_match, highest_similarity
+
+    # Fetch weather data
+    async def fetch_weather(self, city: str) -> str:
+        try:
+            async with python_weather.Client(unit=python_weather.METRIC) as client:
+                weather = await client.get(city)
+                return f"In {city}, it's {weather.temperature}°C and the condition is {weather.kind}"
+        except Exception as e:
+            return f"Could not get any Weather data: {e}"
+        
+    # Get requested city by user input
+    def extract_city(self, user_input: str) -> str:
+        # (?i)        -> Case-insensitive (ignore upper and lowercase)
+        # (?:in|en|at) -> Search on of this words (non-capturing group)
+        # \s+         -> One or more blank spaces
+        # ([a-z\s]+)-> CAPTURE one or more letters o spaces (city's name)
+        # Note: [A-Z] - > Unnecessary due is Case Insensitive 
+
+        pattern = r"(?i)(?:in|en|at|sobre)\s+([a-z\s]+)"
+        match = re.search(pattern, user_input)
+
+        if match:
+            city = match.group(1).strip() #group(1) is what befall in the parenthesis capture
+            return city
+        
+        return 'New York' # Default City
 
     # 9. Create the main function of the class
     def run(self) -> None:
@@ -44,16 +77,35 @@ class ChatBot:
             if response == 'GET_TIME':
                 response = f'The time is: {datetime.now():%H:%M}'
 
+            if response == 'GET_WEATHER':
+                city = self.extract_city(user_input)
+
+                print(f"{self.name} is looking for {city.capitalize()} status...")
+                response = asyncio.run(self.fetch_weather(city))
+
             print(f'{self.name}: {response} (Similarity: {similarity:.2%})')
+
+            if response == 'Goodbye! Have a great day!':
+                sys.exit(1)
 
 
 # 11. Create a main entry point
 def main() -> None:
     responses: dict[str, str] = {
         'hello': 'Hello! How are you today?',
+        'hi': 'Hi, how are you doing?',
         'how are you': 'Great, thanks! What about you?',
         'what time is it': 'GET_TIME',
-        'bye': 'Goodbye! Have a great day!'
+        'good bye': 'Goodbye! Have a great day!',
+        'Was a long day, right?': 'Indeed, I\'m exhausted',
+        'I could have a nice slice of pizza right now': 'That\'s a great idea, let\'s eat!',
+        'weather': 'GET_WEATHER',
+        'how is the weather today': 'GET_WEATHER',
+        'i\'m thirsty': 'drink some healthy cup of water!',
+        'i\' feeling lazy today': 'get some sleep to be motivated',
+        'not feeling right now': 'do some exercise, healthy body healthy mind!',
+        'give an advice': 'breath some fresh air!',
+        'i hope everything turns ok': 'it will, believe in your skills!',
     }
 
     # 12. Create a ChatBot instance and start chatting
